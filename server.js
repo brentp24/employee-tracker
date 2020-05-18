@@ -21,79 +21,141 @@ connection.connect(function (err) {
     askInquirer();
 });
 
-
 function askInquirer() {
     inquirer.prompt(
         {
             name: "initialQuestion",
             type: "list",
             message: "What would you like to do?",
-            choices:  ["View all departments", "View all roles", "View all employees",  "Add department", "Add role", "Add employee"]
-        }
-    )
-.then(function (response) {
-    console.log(response)
-    switch(response.initialQuestion) {
-        case "View all departments": 
-        connection.query ("SELECT * FROM employee_tracker.departments;", function(err, res) {
-            if (err) throw err; 
-            console.table(res);
-            
+            choices: ["View all departments", "View all roles", "View all employees", "Add department", "Add role", "Add employee"]
         })
+        .then(function (response) {
+            // console.log(response)
+            switch (response.initialQuestion) {
+                case "View all departments":
+                    viewDepartments();
+                    break;
 
-        break;
-        
-        case "View all roles": 
-        connection.query ("SELECT * FROM employee_tracker.roles;", function(err, res) {
-            if (err) throw err; 
-            console.table(res);
-            
+                case "View all roles":
+                    viewRoles();
+                    break;
+
+                case "View all employees":
+                    viewEmployees();
+                    break;
+
+                case "Add department":
+                    addDepartment();
+                    break;
+
+                case "Add role":
+                    addRole();
+                    break;
+
+                case "Add employee":
+                    addEmployee();
+                    break;
+            }
         })
+};
 
-        break;
-    
-        case "View all employees": 
-        connection.query ("SELECT * FROM employee_tracker.employees;", function(err, res) {
-            if (err) throw err; 
-            console.table(res);
-            
+// Write formulas for each case
+function viewDepartments() {
+    connection.query("SELECT * FROM employee_tracker.departments;", function (err, res) {
+        if (err) throw err;
+        console.table(res);
+    })
+};
+
+
+function viewRoles() {
+    connection.query("SELECT * FROM employee_tracker.roles;", function (err, res) {
+        if (err) throw err;
+        console.table(res);
+    })
+};
+
+function viewEmployees() {
+    connection.query("SELECT * FROM employee_tracker.employees;", function (err, res) {
+        if (err) throw err;
+        console.table(res);
+    })
+};
+
+function addDepartment() {
+    inquirer.prompt(
+        {
+            name: "dept_name",
+            type: "input",
+            message: "What is the name of the department?",
         })
-        
-        break;
-
-        case "Add department": 
-        connection.query ("INSERT INTO employee_tracker.departments SET ?", function(err, res) {
-            if (err) throw err; 
-            console.table(res);
-            
+        .then(function (response) {
+            connection.query ("INSERT INTO employee_tracker.departments (dept_name) VALUES (?)", [response.dept_name],function(err, res) {
+                if (err) throw err; 
+                console.table(res); 
+            })
         })
-        
-        break;
+};
 
-        case "Add role": 
-        connection.query ("INSERT INTO employee_tracker.roles SET ?", function(err, res) {
-            if (err) throw err; 
-            console.table(res);
-            
+
+
+function addRole() {
+    inquirer.prompt([
+        {
+            name: "title",
+            type: "input",
+            message: "What is the title?",
+        },
+        {
+            name: "salary",
+            type: "input",
+            message: "What is the salary?",
+        },
+        {
+            name: "department",
+            type: "list",
+            message: "What is the department?",
+            choices: [1,2,3],
+        }]
+        )
+        .then(function (response) {
+            connection.query ("INSERT INTO employee_tracker.roles (title, salary, dept_id) VALUES(?,?,?)", [response.title, response.salary, response.department],function(err, res) {
+                if (err) throw err; 
+                console.table(res); 
+            })
         })
-        
-        break;
-
-        case "Add employee": 
-        connection.query ("INSERT INTO employee_tracker.employees SET ?", function(err, res) {
-            if (err) throw err; 
-            console.table(res);
-            
-        })
-        
-        break;
-
     }
 
+function addEmployee() {
+    inquirer.prompt([
+        {
+            name: "first_name",
+            type: "input",
+            message: "What is the first name?",
+        },
+        {
+            name: "last_name",
+            type: "input",
+            message: "What is the last name?",
+        },
+        {
+            name: "role_id",
+            type: "list",
+            message: "What is the role?",
+            choices: [1,2,3],
+        },
+        {
+            name: "manager_id",
+            type: "list",
+            message: "Who is the manager?",
+            choices: [1,2,3],
+        }
+    ]
+        )
+        .then(function (response) {
+            connection.query ("INSERT INTO employee_tracker.employees (first_name, last_name, role_id, manager_id) VALUES(?,?,?,?)", [response.first_name, response.last_name, response.role_id, response.manager_id],function(err, res) {
+                if (err) throw err; 
+                console.table(res); 
+            })
+        })
 }
-
-)
-
-}
-
-
