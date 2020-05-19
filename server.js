@@ -1,5 +1,11 @@
 var mysql = require("mysql");
 var inquirer = require("inquirer");
+var emp_choices = [];
+var emp_ids = [];
+var role_choices = [];
+var role_ids = [];
+var dept_choices = [];
+var dept_ids = [];
 
 var connection = mysql.createConnection({
     host: "localhost",
@@ -18,8 +24,44 @@ var connection = mysql.createConnection({
 //Make Connection, Run Inquirer
 connection.connect(function (err) {
     if (err) throw err;
+    getRoleList();
+    getEmployeeList();
+    getDepartmentList();
     askInquirer();
 });
+
+function getRoleList() {
+        //get role names
+        connection.query("SELECT * FROM employee_tracker.roles;", function (err, res) {
+            if (err) throw err;
+            for (i = 0; i < res.length; i += 1) {
+                role_choices.push((res[i].title))
+                role_ids.push((res[i].role_id));
+            }
+        });
+}
+
+function getEmployeeList() {
+connection.query("SELECT * FROM employee_tracker.employees;", function (err, res2) {
+    if (err) throw err;
+    for (i = 0; i < res2.length; i += 1) {
+        emp_choices.push(res2[i].first_name + " " + res2[i].last_name)
+        emp_ids.push((res2[i].emp_id));
+    }
+    emp_choices.push("None"); // if no manager. 
+});
+}
+
+function getDepartmentList() {
+    connection.query("SELECT * FROM employee_tracker.departments;", function (err, res) {
+        if (err) throw err;
+        for (i = 0; i < res.length; i += 1) {
+            dept_choices.push((res[i].dept_name))
+            dept_ids.push((res[i].dept_id));
+        }
+    });
+}
+
 
 function askInquirer() {
     inquirer.prompt(
@@ -27,39 +69,33 @@ function askInquirer() {
             name: "initialQuestion",
             type: "list",
             message: "What would you like to do?",
-            choices: ["View all departments", "View all roles", "View all employees", "Add department", "Add role", "Add employee"]
+            choices: ["View all departments", "View all roles", "View all employees", "Add department", "Add role", "Add employee", "Update employee"]
         })
         .then(function (response) {
             // console.log(response)
             switch (response.initialQuestion) {
                 case "View all departments":
-                    viewDepartments();
+                    viewDepartments();                    
                     break;
-
                 case "View all roles":
                     viewRoles();
                     break;
-
                 case "View all employees":
                     viewEmployees();
                     break;
-
                 case "Add department":
                     addDepartment();
                     break;
-
                 case "Add role":
-                    addRole();
+                    addRole();                 
                     break;
-
                 case "Add employee":
-                    addEmployee();
+                    addEmployee();                    
                     break;
-
-                case "Add manager":
-                    addManager();
+                case "Update employee":
+                    updateEmployee();
                     break;
-            }
+            }            
         })
 };
 
@@ -86,7 +122,6 @@ function viewEmployees() {
     })
 };
 
-
 function addDepartment() {
     inquirer.prompt(
         {
@@ -97,25 +132,12 @@ function addDepartment() {
         .then(function (response) {
             connection.query("INSERT INTO employee_tracker.departments (dept_name) VALUES (?)", [response.dept_name], function (err, res) {
                 if (err) throw err;
-
             })
+            askAgain();
         })
 };
 
-
-
 function addRole() {
-    //get department names
-    var dept_choices = [];
-    var dept_ids = [];
-    connection.query("SELECT * FROM employee_tracker.departments;", function (err, res) {
-        if (err) throw err;
-        for (i = 0; i < res.length; i += 1) {
-            dept_choices.push((res[i].dept_name))
-            dept_ids.push((res[i].dept_id));
-        }
-    });
-
     inquirer.prompt([
         {
             name: "title",
@@ -137,34 +159,12 @@ function addRole() {
         .then(function (response) {
             connection.query("INSERT INTO employee_tracker.roles (title, salary, dept_id) VALUES(?,?,?)", [response.title, response.salary, dept_ids[dept_choices.indexOf(response.department)]], function (err, res) {
                 if (err) throw err;
-
             })
+            askAgain();
         })
 }
 
 function addEmployee() {
-    //get role names
-    var role_choices = [];
-    var role_ids = [];
-    connection.query("SELECT * FROM employee_tracker.roles;", function (err, res) {
-        if (err) throw err;
-        for (i = 0; i < res.length; i += 1) {
-            role_choices.push((res[i].title))
-            role_ids.push((res[i].role_id));
-        }
-    });
-
-    //get employee names for managers
-    var manager_choices = [];
-    var manager_ids = [];
-    connection.query("SELECT * FROM employee_tracker.employees;", function (err, res2) {
-        if (err) throw err;
-        for (i = 0; i < res2.length; i += 1) {
-            manager_choices.push(res2[i].first_name + " " + res2[i].last_name)
-            manager_ids.push((res2[i].emp_id));
-        }
-    });
-
     inquirer.prompt([
         {
             name: "first_name",
@@ -186,7 +186,7 @@ function addEmployee() {
             name: "manager_id",
             type: "list",
             message: "Who is the manager?",
-            choices: manager_choices,
+            choices: emp_choices,
         }
     ]
     )
@@ -196,11 +196,68 @@ function addEmployee() {
                     response.first_name,
                     response.last_name,
                     role_ids[role_choices.indexOf(response.title)],
-                    manager_ids[manager_choices.indexOf(response.manager_id)]
+                    emp_ids[emp_choices.indexOf(response.manager_id)]
                 ], function (err, res) {
                     if (err) throw err;
                 })
+                askAgain();
         })
 }
+
+function updateEmployee() {
+    inquirer.prompt([
+        {
+            name: "updated_emp",
+            type: "list",
+            message: "Which employee would you like to update?",
+            choices: emp_choices,
+        },
+
+        {
+            name: "title",
+            type: "list",
+            message: "What is the role?",
+            choices: role_choices,
+        },
+        {
+            name: "manager_id",
+            type: "list",
+            message: "Who is the manager?",
+            choices: emp_choices,
+        }
+    ]
+    )
+        .then(function (response) {
+
+            connection.query("UPDATE employee_tracker.employees SET role_id = (?), manager_id = (?) WHERE emp_id = (?)",
+                [
+                    role_ids[role_choices.indexOf(response.title)],
+                    emp_ids[emp_choices.indexOf(response.manager_id)],
+                    emp_ids[emp_choices.indexOf(response.updated_emp)]
+                ], function (err, res) {
+                    if (err) throw err;
+                })
+                askAgain();
+        })
+}
+
+function askAgain() {
+    inquirer
+        .prompt([
+            {
+                type: "list",
+                message: "Would you like to do anything else?",
+                name: "addMoreEmployees",
+                choices: [
+                    "Yes",
+                    "No"
+                ]
+            }])
+        .then(function (response) {
+            if (response.addMoreEmployees === "Yes") {
+                askInquirer();
+            }
+        })
+    };
 
 
